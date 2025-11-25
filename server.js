@@ -87,4 +87,12 @@ app.listen(PORT, () => {
   console.log(`   - Categories: http://localhost:${PORT}/api/categories`);
 });
 
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://your-netlify-app.netlify.app', // You'll add this after Phase 2
+    'https://*.netlify.app' // Allow all Netlify subdomains
+  ],
+  credentials: true
+}));
 export default app;
