@@ -5,9 +5,9 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-      "test-crud": "node scripts/testCRUD.js",
+    "test-crud": "node scripts/testCRUD.js",
     "start": "node server.js",
-     "seed": "node scripts/seedData.js",
+    "seed": "node scripts/seedData.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,6 +21,7 @@
     "helmet": "^8.1.0",
     "mongoose": "^8.20.1",
     "morgan": "^1.10.1",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "react-scripts": "^5.0.1"
   }
 }

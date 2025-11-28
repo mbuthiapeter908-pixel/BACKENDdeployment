@@ -17,6 +17,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || 'https://backenddeployment-1-wwzi.onrender.com/api';
 
 // Connect to MongoDB
 connectDB();
@@ -78,20 +79,21 @@ app.use((req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 Health check: `${BACKEND_URL}/health`);
   console.log(`📝 API Documentation:`);
-  console.log(`   - Jobs: http://localhost:${PORT}/api/jobs`);
-  console.log(`   - Employers: http://localhost:${PORT}/api/employers`);
-  console.log(`   - Categories: http://localhost:${PORT}/api/categories`);
+  console.log(`   - Jobs: `${BACKEND_URL}/api/jobs`);
+  console.log(`   - Employers: `${BACKEND_URL}/api/employers`);
+  console.log(`   - Categories: `${BACKEND_URL}/api/categories`);
 });
 
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://your-netlify-app.netlify.app', // You'll add this after Phase 2
-    'https://*.netlify.app' // Allow all Netlify subdomains
+    'https://backenddeployment-1-wwzi.onrender.com/'
+    'https://jobshub-works.vercel.app', // You'll add this after Phase 2
+    'https://*.vercel.app' // Allow all Netlify subdomains
   ],
   credentials: true
 }));
