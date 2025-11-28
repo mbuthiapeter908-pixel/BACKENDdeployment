@@ -5,8 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
+
 import webhookRoutes from './routes/webhooks.js';
-// Import routes
 import jobRoutes from './routes/jobs.js';
 import employerRoutes from './routes/employers.js';
 import categoryRoutes from './routes/categories.js';
@@ -17,17 +17,29 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || 'https://backenddeployment-1-wwzi.onrender.com/api';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backenddeployment-1-wwzi.onrender.com';
 
 // Connect to MongoDB
 connectDB();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
-app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('combined'));
+
+// CORS MUST be before routes
+app.use(
+  cors({
+    origin: [
+      'http://localhost:3000',
+      'https://backenddeployment-1-wwzi.onrender.com',
+      'https://jobshub-works.vercel.app',
+      'https://*.vercel.app',
+    ],
+    credentials: true,
+  })
+);
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -45,56 +57,49 @@ app.get('/', (req, res) => {
     endpoints: {
       jobs: '/api/jobs',
       employers: '/api/employers',
-      categories: '/api/categories'
-    }
+      categories: '/api/categories',
+    },
   });
 });
 
-// Health check route
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
-    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-    timestamp: new Date().toISOString()
+    database:
+      mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Error handling middleware
+// Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'production' ? {} : err.message
+    error:
+      process.env.NODE_ENV === 'production' ? {} : err.message,
   });
 });
 
-// 404 handler
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     message: 'Route not found',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running`);
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: `${BACKEND_URL}/health`);
-  console.log(`📝 API Documentation:`);
-  console.log(`   - Jobs: `${BACKEND_URL}/api/jobs`);
-  console.log(`   - Employers: `${BACKEND_URL}/api/employers`);
-  console.log(`   - Categories: `${BACKEND_URL}/api/categories`);
+  console.log(`🔗 Health check: ${BACKEND_URL}/health`);
+  console.log(`📝 API Endpoints:`);
+  console.log(`   - Jobs: ${BACKEND_URL}/api/jobs`);
+  console.log(`   - Employers: ${BACKEND_URL}/api/employers`);
+  console.log(`   - Categories: ${BACKEND_URL}/api/categories`);
 });
 
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://backenddeployment-1-wwzi.onrender.com/'
-    'https://jobshub-works.vercel.app', // You'll add this after Phase 2
-    'https://*.vercel.app' // Allow all Netlify subdomains
-  ],
-  credentials: true
-}));
 export default app;
