@@ -28,18 +28,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 
-// CORS MUST be before routes
 app.use(
   cors({
     origin: [
-      'http://localhost:3000',
-      'https://backenddeployment-1-wwzi.onrender.com',
-      'https://jobshub-works.vercel.app',
-      'https://*.vercel.app',
+      "http://localhost:3000",
+      "https://jobhub-works.vercel.app",   // your frontend
+      "https://backenddeployment-1-wwzi.onrender.com" // backend (self)
     ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
 
 // Routes
 app.use('/api/users', userRoutes);
