@@ -37,39 +37,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+
   preferences: {
-    jobAlerts: {
-      type: Boolean,
-      default: true
-    },
-    emailNotifications: {
-      type: Boolean,
-      default: true
-    },
-    preferredCategories: [{
-      type: String
-    }],
-    preferredLocations: [{
-      type: String
-    }],
-    salaryRange: {
-      min: Number,
-      max: Number
-    }
+    jobAlerts: { type: Boolean, default: true },
+    emailNotifications: { type: Boolean, default: true },
+    preferredCategories: [{ type: String }],
+    preferredLocations: [{ type: String }],
+    salaryRange: { min: Number, max: Number }
   },
+
   profile: {
-    headline: {
-      type: String,
-      maxlength: [100, 'Headline cannot be more than 100 characters']
-    },
-    bio: {
-      type: String,
-      maxlength: [500, 'Bio cannot be more than 500 characters']
-    },
-    skills: [{
-      type: String,
-      trim: true
-    }],
+    headline: { type: String, maxlength: [100, 'Headline cannot be more than 100 characters'] },
+    bio: { type: String, maxlength: [500, 'Bio cannot be more than 500 characters'] },
+    skills: [{ type: String, trim: true }],
     education: [{
       institution: String,
       degree: String,
@@ -91,10 +71,13 @@ const userSchema = new mongoose.Schema({
     linkedinUrl: String,
     githubUrl: String
   },
+
+  // ✅ UPDATED applications block as you instructed
   applications: [{
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Job'
+      ref: 'Job',
+      required: true
     },
     appliedAt: {
       type: Date,
@@ -102,11 +85,22 @@ const userSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['applied', 'viewed', 'interview', 'rejected', 'accepted'],
+      enum: ['applied', 'under_review', 'interview', 'rejected', 'accepted'],
       default: 'applied'
     },
-    coverLetter: String
+    coverLetter: {
+      type: String,
+      maxlength: [1000, 'Cover letter cannot exceed 1000 characters']
+    },
+    resumeUrl: {
+      type: String
+    },
+    notes: {
+      type: String,
+      maxlength: [500, 'Notes cannot exceed 500 characters']
+    }
   }],
+
   savedJobs: [{
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -117,34 +111,28 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }]
-}, {
-  timestamps: true
-});
 
-// Index for better search performance
+}, { timestamps: true });
+
 userSchema.index({ email: 1, userType: 1 });
 userSchema.index({ 'preferences.preferredCategories': 1 });
 userSchema.index({ 'preferences.preferredLocations': 1 });
 
-// Virtual for full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`.trim();
 });
 
-// Method to check if user is employer
-userSchema.methods.isEmployer = function() {
+userSchema.methods.isEmployer = function () {
   return this.userType === 'employer';
 };
 
-// Method to check if user is job seeker
-userSchema.methods.isJobSeeker = function() {
+userSchema.methods.isJobSeeker = function () {
   return this.userType === 'job_seeker';
 };
 
-// Static method to find or create user from Clerk data
-userSchema.statics.findOrCreateFromClerk = async function(clerkUser) {
+userSchema.statics.findOrCreateFromClerk = async function (clerkUser) {
   let user = await this.findOne({ clerkUserId: clerkUser.id });
-  
+
   if (!user) {
     const email = clerkUser.emailAddresses[0]?.emailAddress;
     const firstName = clerkUser.firstName;
@@ -153,19 +141,18 @@ userSchema.statics.findOrCreateFromClerk = async function(clerkUser) {
 
     user = new this({
       clerkUserId: clerkUser.id,
-      email: email,
-      firstName: firstName,
-      lastName: lastName,
-      profileImage: profileImage
+      email,
+      firstName,
+      lastName,
+      profileImage
     });
 
     await user.save();
     console.log(`✅ Created new user in MongoDB: ${email}`);
   }
-  
+
   return user;
 };
 
 const User = mongoose.model('User', userSchema);
-
 export default User;
