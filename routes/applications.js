@@ -4,7 +4,7 @@ import Job from '../models/Job.js';
 
 const router = express.Router();
 
-// POST /api/applications - Apply for a job
+// POST /api/applications - Apply for a job (WITH AUTO-USER CREATION)
 router.post('/', async (req, res) => {
   try {
     const { clerkUserId, jobId, coverLetter, resumeUrl, notes } = req.body;
@@ -26,13 +26,20 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await User.findOne({ clerkUserId });
+    // Find OR CREATE user
+    let user = await User.findOne({ clerkUserId });
+    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
+      // Auto-create user if they don't exist
+      user = new User({
+        clerkUserId: clerkUserId,
+        email: req.body.email || `${clerkUserId}@jobhub.app`,
+        firstName: req.body.firstName || 'User',
+        lastName: req.body.lastName || '',
+        userType: 'job_seeker'
       });
+      await user.save();
+      console.log(`✅ Auto-created user for application: ${clerkUserId}`);
     }
 
     // Check if already applied
@@ -96,34 +103,23 @@ router.post('/', async (req, res) => {
 router.get('/user/:clerkUserId', async (req, res) => {
   try {
     const { clerkUserId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
 
+    // Find user
     const user = await User.findOne({ clerkUserId })
-      .populate('applications.jobId')
-      .select('applications');
+      .populate('applications.jobId');
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
+      // Return empty array instead of 404
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No applications found'
       });
     }
 
-    // Paginate applications
-    const skip = (page - 1) * limit;
-    const applications = user.applications
-      .sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt))
-      .slice(skip, skip + parseInt(limit));
-
     res.json({
       success: true,
-      data: applications,
-      pagination: {
-        current: parseInt(page),
-        total: Math.ceil(user.applications.length / limit),
-        count: applications.length,
-        totalApplications: user.applications.length
-      }
+      data: user.applications.sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt))
     });
 
   } catch (error) {
@@ -131,117 +127,6 @@ router.get('/user/:clerkUserId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching applications',
-      error: error.message
-    });
-  }
-});
-
-// GET /api/applications/job/:jobId - Get applications for a job (employer view)
-router.get('/job/:jobId', async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-
-    // Verify job exists and get employer info
-    const job = await Job.findById(jobId);
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found'
-      });
-    }
-
-    // Find all users who applied to this job
-    const users = await User.find({ 
-      'applications.jobId': jobId 
-    }).populate('applications.jobId');
-
-    const applications = users.flatMap(user => 
-      user.applications
-        .filter(app => app.jobId._id.toString() === jobId)
-        .map(app => ({
-          ...app.toObject(),
-          user: {
-            _id: user._id,
-            clerkUserId: user.clerkUserId,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profileImage: user.profileImage
-          }
-        }))
-    ).sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
-
-    // Paginate
-    const skip = (page - 1) * limit;
-    const paginatedApplications = applications.slice(skip, skip + parseInt(limit));
-
-    res.json({
-      success: true,
-      data: paginatedApplications,
-      job: {
-        title: job.title,
-        company: job.company
-      },
-      pagination: {
-        current: parseInt(page),
-        total: Math.ceil(applications.length / limit),
-        count: paginatedApplications.length,
-        totalApplications: applications.length
-      }
-    });
-
-  } catch (error) {
-    console.error('Get job applications error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching job applications',
-      error: error.message
-    });
-  }
-});
-
-// PUT /api/applications/:applicationId/status - Update application status
-router.put('/:applicationId/status', async (req, res) => {
-  try {
-    const { applicationId } = req.params;
-    const { status, clerkUserId } = req.body;
-
-    if (!status || !clerkUserId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status and User ID are required'
-      });
-    }
-
-    const user = await User.findOne({ 
-      'applications._id': applicationId,
-      clerkUserId 
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    const application = user.applications.id(applicationId);
-    application.status = status;
-
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Application status updated successfully',
-      data: application
-    });
-
-  } catch (error) {
-    console.error('Update application status error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating application status',
       error: error.message
     });
   }
